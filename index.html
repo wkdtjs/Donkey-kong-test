@@ -443,16 +443,14 @@
         }
 
         function updateMario() {
-            // 사다리 판정 로직 개선
+            // 사다리 판정 로직
             let currentLadder = null;
             const marioCenter = mario.x + mario.width / 2;
             const marioBottom = mario.y + mario.height;
 
             for (let ladder of ladders) {
-                const ladderCenter = ladder.x + ladder.width / 2;
-                
-                // 사다리 범위 체크 (가로: 중심 근처, 세로: 사다리 전체 높이 + 약간의 여유)
-                if (Math.abs(marioCenter - ladderCenter) < 15 &&
+                // 사다리 범위 체크
+                if (Math.abs(marioCenter - (ladder.x + ladder.width / 2)) < 15 &&
                     marioBottom >= ladder.y - 5 && 
                     marioBottom <= ladder.y + ladder.height + 5) {
                     currentLadder = ladder;
@@ -483,7 +481,7 @@
                 // 사다리 바닥 도착 (내려올 때)
                 if (currentLadder && marioBottom >= ladderBottom(currentLadder)) {
                     mario.climbing = false;
-                    mario.onGround = true; // 바닥에 닿았다고 가정
+                    mario.onGround = true;
                 }
                 
                 // 사다리 영역을 완전히 벗어나면 추락
@@ -492,12 +490,11 @@
                 }
 
                 if (keys.left || keys.right) {
-                    // 사다리에서 옆으로 내리기 (바닥이 있을 때만 허용해야 안전하지만 고전 게임 느낌 살림)
                     mario.climbing = false;
                 }
 
             } else {
-                // 좌우 이동
+                // 좌우 이동 및 점프 로직 (기존과 동일)
                 if (keys.left) {
                     mario.vx = -MOVE_SPEED;
                     mario.facing = -1;
@@ -513,7 +510,6 @@
                 mario.vy += GRAVITY;
                 if (mario.vy > 12) mario.vy = 12;
 
-                // 점프
                 if (keys.jump && mario.onGround && jumpReleased) {
                     mario.vy = JUMP_FORCE;
                     mario.onGround = false;
@@ -529,15 +525,16 @@
 
                 // 사다리 타기 시작 (아래로)
                 if (keys.down && mario.onGround) {
-                     // 발 아래 사다리가 있는지 확인
                      for (let ladder of ladders) {
                         const ladderCenter = ladder.x + ladder.width / 2;
+                        // 발 위치가 사다리 상단 근처인지 확인
                         if (Math.abs(marioCenter - ladderCenter) < 15 &&
                             Math.abs(marioBottom - ladder.y) < 10) {
+                            
                             mario.x = ladderCenter - mario.width / 2;
                             mario.climbing = true;
                             mario.onGround = false;
-                            mario.y += 5; // 살짝 내려가서 즉시 다시 올라오지 않게
+                            mario.y += 5; // 사다리 안쪽으로 살짝 이동
                             break;
                         }
                     }
@@ -546,19 +543,21 @@
                 mario.x += mario.vx;
                 mario.y += mario.vy;
 
-                // 플랫폼 충돌 감지
-                mario.onGround = false;
-                for (let platform of platforms) {
-                    if (mario.vy >= 0 && // 떨어지는 중일 때만
-                        mario.x + mario.width > platform.x &&
-                        mario.x < platform.x + platform.width &&
-                        mario.y + mario.height >= platform.y &&
-                        mario.y + mario.height <= platform.y + 16) { // 관용 범위
-                        
-                        mario.y = platform.y - mario.height;
-                        mario.vy = 0;
-                        mario.onGround = true;
-                        break;
+                // *** 수정됨: 사다리를 타고 있는 상태가 아닐 때만 플랫폼 충돌 감지 실행 ***
+                if (!mario.climbing) {
+                    mario.onGround = false;
+                    for (let platform of platforms) {
+                        if (mario.vy >= 0 && // 떨어지는 중일 때만
+                            mario.x + mario.width > platform.x &&
+                            mario.x < platform.x + platform.width &&
+                            mario.y + mario.height >= platform.y &&
+                            mario.y + mario.height <= platform.y + 16) {
+                            
+                            mario.y = platform.y - mario.height;
+                            mario.vy = 0;
+                            mario.onGround = true;
+                            break;
+                        }
                     }
                 }
             }
