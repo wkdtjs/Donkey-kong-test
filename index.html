@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donkey Kong (1981) - Retro Edition</title>
+    <title>Donkey Kong (1981) - Advanced Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
@@ -15,12 +15,14 @@
         }
         
         body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             min-height: 100vh;
+            touch-action: manipulation; /* 모바일 터치 확대 방지 */
         }
         
         .game-container {
             image-rendering: pixelated;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
         
         canvas {
@@ -60,14 +62,23 @@
         .leaderboard-row:nth-child(even) {
             background: rgba(231, 76, 60, 0.1);
         }
+        
+        /* 모바일 컨트롤 버튼 스타일 */
+        .control-pad {
+            user-select: none;
+            -webkit-user-select: none;
+        }
     </style>
 </head>
 <body class="text-white overflow-x-hidden">
     <!-- Login Screen -->
     <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
-        <div class="bg-gray-900 pixel-border rounded-lg p-8 max-w-md w-full">
+        <div class="bg-gray-900 pixel-border rounded-lg p-8 max-w-md w-full relative overflow-hidden">
+            <!-- 배경 장식 -->
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500"></div>
+            
             <h1 class="text-2xl text-yellow-400 glow-text text-center mb-2">DONKEY KONG</h1>
-            <p class="text-xs text-red-500 text-center mb-8">~ 1981 EDITION ~</p>
+            <p class="text-xs text-red-500 text-center mb-8">~ ADVANCED EDITION ~</p>
             
             <div class="space-y-6">
                 <div>
@@ -84,62 +95,62 @@
                            placeholder="Enter ID..." maxlength="15">
                 </div>
                 
-                <button onclick="login()" class="retro-btn w-full py-4 rounded text-white text-sm">
+                <button onclick="login()" class="retro-btn w-full py-4 rounded text-white text-sm cursor-pointer">
                     START GAME
                 </button>
                 
-                <button onclick="showLeaderboard()" class="retro-btn w-full py-3 rounded text-white text-xs bg-gradient-to-b from-blue-600 to-blue-800">
+                <button onclick="showLeaderboard()" class="retro-btn w-full py-3 rounded text-white text-xs bg-gradient-to-b from-blue-600 to-blue-800 cursor-pointer">
                     VIEW LEADERBOARD
                 </button>
             </div>
             
             <div class="mt-6 text-center">
-                <p class="text-xs text-gray-500">Use ARROW KEYS to move</p>
-                <p class="text-xs text-gray-500">SPACE to jump</p>
+                <p class="text-[10px] text-gray-500">Use ARROW KEYS to move & climb</p>
+                <p class="text-[10px] text-gray-500">SPACE to jump</p>
             </div>
         </div>
     </div>
 
     <!-- Game Screen -->
-    <div id="gameScreen" class="hidden min-h-screen flex flex-col items-center justify-center p-4">
-        <div class="mb-4 flex items-center gap-8">
+    <div id="gameScreen" class="hidden min-h-screen flex flex-col items-center justify-center p-2">
+        <div class="mb-2 flex flex-wrap justify-center gap-4 md:gap-8 w-full max-w-[512px]">
             <div class="text-center">
-                <p class="text-xs text-yellow-400">PLAYER</p>
-                <p id="displayName" class="text-sm text-white">---</p>
+                <p class="text-[10px] text-yellow-400">PLAYER</p>
+                <p id="displayName" class="text-xs text-white">---</p>
             </div>
             <div class="text-center">
-                <p class="text-xs text-yellow-400">SCORE</p>
-                <p id="scoreDisplay" class="text-xl text-red-500 glow-text">0</p>
+                <p class="text-[10px] text-yellow-400">SCORE</p>
+                <p id="scoreDisplay" class="text-lg text-red-500 glow-text">0</p>
             </div>
             <div class="text-center">
-                <p class="text-xs text-yellow-400">LIVES</p>
-                <p id="livesDisplay" class="text-xl text-red-500">❤❤❤</p>
+                <p class="text-[10px] text-yellow-400">LIVES</p>
+                <p id="livesDisplay" class="text-lg text-red-500">❤❤❤</p>
             </div>
             <div class="text-center">
-                <p class="text-xs text-yellow-400">LEVEL</p>
-                <p id="levelDisplay" class="text-xl text-white">1</p>
+                <p class="text-[10px] text-yellow-400">LEVEL</p>
+                <p id="levelDisplay" class="text-lg text-white">1</p>
             </div>
         </div>
         
-        <div class="game-container pixel-border rounded">
-            <canvas id="gameCanvas" width="512" height="448"></canvas>
+        <div class="game-container pixel-border rounded bg-black">
+            <canvas id="gameCanvas" width="512" height="448" class="w-full h-auto max-w-full"></canvas>
         </div>
         
         <div class="mt-4 flex gap-4">
-            <button onclick="restartGame()" class="retro-btn px-6 py-2 rounded text-xs">RESTART</button>
-            <button onclick="backToMenu()" class="retro-btn px-6 py-2 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800">MENU</button>
+            <button onclick="restartGame()" class="retro-btn px-6 py-2 rounded text-xs cursor-pointer">RESTART</button>
+            <button onclick="backToMenu()" class="retro-btn px-6 py-2 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800 cursor-pointer">MENU</button>
         </div>
         
         <!-- Mobile Controls -->
-        <div class="mt-4 md:hidden grid grid-cols-3 gap-2 w-48">
+        <div class="mt-4 md:hidden grid grid-cols-3 gap-2 w-64 control-pad">
             <div></div>
-            <button ontouchstart="mobileControl('up')" ontouchend="mobileControlEnd('up')" class="retro-btn p-4 rounded text-lg">▲</button>
+            <button ontouchstart="mobileControl('up')" ontouchend="mobileControlEnd('up')" class="retro-btn p-4 rounded text-xl flex items-center justify-center active:bg-red-700">▲</button>
             <div></div>
-            <button ontouchstart="mobileControl('left')" ontouchend="mobileControlEnd('left')" class="retro-btn p-4 rounded text-lg">◀</button>
-            <button ontouchstart="mobileControl('jump')" ontouchend="mobileControlEnd('jump')" class="retro-btn p-4 rounded text-xs">JUMP</button>
-            <button ontouchstart="mobileControl('right')" ontouchend="mobileControlEnd('right')" class="retro-btn p-4 rounded text-lg">▶</button>
+            <button ontouchstart="mobileControl('left')" ontouchend="mobileControlEnd('left')" class="retro-btn p-4 rounded text-xl flex items-center justify-center active:bg-red-700">◀</button>
+            <button ontouchstart="mobileControl('jump')" ontouchend="mobileControlEnd('jump')" class="retro-btn p-2 rounded text-[10px] flex items-center justify-center font-bold active:bg-red-700">JUMP</button>
+            <button ontouchstart="mobileControl('right')" ontouchend="mobileControlEnd('right')" class="retro-btn p-4 rounded text-xl flex items-center justify-center active:bg-red-700">▶</button>
             <div></div>
-            <button ontouchstart="mobileControl('down')" ontouchend="mobileControlEnd('down')" class="retro-btn p-4 rounded text-lg">▼</button>
+            <button ontouchstart="mobileControl('down')" ontouchend="mobileControlEnd('down')" class="retro-btn p-4 rounded text-xl flex items-center justify-center active:bg-red-700">▼</button>
             <div></div>
         </div>
     </div>
@@ -153,35 +164,35 @@
                 <p class="text-center text-gray-500 text-xs">Loading...</p>
             </div>
             
-            <button onclick="backToLogin()" class="retro-btn w-full py-3 rounded text-white text-xs mt-6">
+            <button onclick="backToLogin()" class="retro-btn w-full py-3 rounded text-white text-xs mt-6 cursor-pointer">
                 BACK TO MENU
             </button>
         </div>
     </div>
 
     <!-- Game Over Modal -->
-    <div id="gameOverModal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-        <div class="bg-gray-900 pixel-border rounded-lg p-8 text-center">
+    <div id="gameOverModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <div class="bg-gray-900 pixel-border rounded-lg p-8 text-center animate-bounce-in">
             <h2 class="text-2xl text-red-500 glow-text mb-4">GAME OVER</h2>
             <p class="text-yellow-400 text-sm mb-2">FINAL SCORE</p>
             <p id="finalScore" class="text-3xl text-white mb-6">0</p>
             <div class="space-y-3">
-                <button onclick="restartGame()" class="retro-btn w-full py-3 rounded text-sm">PLAY AGAIN</button>
-                <button onclick="backToMenu()" class="retro-btn w-full py-3 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800">MAIN MENU</button>
+                <button onclick="restartGame()" class="retro-btn w-full py-3 rounded text-sm cursor-pointer">PLAY AGAIN</button>
+                <button onclick="backToMenu()" class="retro-btn w-full py-3 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800 cursor-pointer">MAIN MENU</button>
             </div>
         </div>
     </div>
 
     <!-- Victory Modal -->
-    <div id="victoryModal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+    <div id="victoryModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
         <div class="bg-gray-900 pixel-border rounded-lg p-8 text-center">
             <h2 class="text-2xl text-yellow-400 glow-text mb-4">VICTORY!</h2>
-            <p class="text-green-400 text-sm mb-2">YOU SAVED PAULINE!</p>
+            <p class="text-green-400 text-sm mb-2">LEVEL COMPLETE!</p>
             <p class="text-yellow-400 text-sm mb-2">SCORE</p>
             <p id="victoryScore" class="text-3xl text-white mb-6">0</p>
             <div class="space-y-3">
-                <button onclick="nextLevel()" class="retro-btn w-full py-3 rounded text-sm">NEXT LEVEL</button>
-                <button onclick="backToMenu()" class="retro-btn w-full py-3 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800">MAIN MENU</button>
+                <button onclick="nextLevel()" class="retro-btn w-full py-3 rounded text-sm cursor-pointer animate-pulse">NEXT LEVEL</button>
+                <button onclick="backToMenu()" class="retro-btn w-full py-3 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800 cursor-pointer">MAIN MENU</button>
             </div>
         </div>
     </div>
@@ -218,13 +229,14 @@
         };
 
         // Game Constants
-        const GRAVITY = 0.4;
-        const JUMP_FORCE = -9;
-        const MOVE_SPEED = 2.5;
-        const CLIMB_SPEED = 2;
+        const GRAVITY = 0.5;
+        const JUMP_FORCE = -10;
+        const MOVE_SPEED = 3;
+        const CLIMB_SPEED = 2.5;
         const CANVAS_WIDTH = 512;
         const CANVAS_HEIGHT = 448;
-
+        const PLATFORM_HEIGHT = 16; // 약간 두껍게 수정
+        
         // Game Objects
         let mario = {};
         let donkeyKong = {};
@@ -233,97 +245,132 @@
         let platforms = [];
         let ladders = [];
         let keys = { left: false, right: false, up: false, down: false, jump: false };
-        let canJump = true;
+        let jumpReleased = true;
 
-        // Platform definitions - 6 levels of platforms
-        const PLATFORM_HEIGHT = 8;
-        const platformLevels = [
-            { y: 410, leftX: 0, rightX: 512 },      // Ground - Level 0
-            { y: 350, leftX: 30, rightX: 512 },     // Level 1 - slopes right to left
-            { y: 290, leftX: 0, rightX: 482 },      // Level 2 - slopes left to right
-            { y: 230, leftX: 30, rightX: 512 },     // Level 3 - slopes right to left
-            { y: 170, leftX: 0, rightX: 482 },      // Level 4 - slopes left to right
-            { y: 110, leftX: 30, rightX: 250 }      // Level 5 - Top platform (DK area)
-        ];
+        // 플랫폼 생성 유틸리티
+        function createPlatform(x, y, width, level, direction) {
+            return { x, y, width, height: PLATFORM_HEIGHT, level, direction };
+        }
+
+        function createLadder(x, y, height) {
+            return { x, y, width: 20, height };
+        }
 
         function initLevel() {
             platforms = [];
             ladders = [];
             barrels = [];
 
-            // Create platforms with slight slopes
-            // Ground
-            platforms.push({ x: 0, y: 410, width: 512, height: PLATFORM_HEIGHT, level: 0 });
+            const platformY = [420, 350, 280, 210, 140, 70]; // 6층 구조
+            const gapSize = 50; // 드럼통이 떨어질 구멍 크기
+            const platformGap = 70; // 층간 간격
 
-            // Level 1 - slight upward slope from right to left
-            platforms.push({ x: 30, y: 350, width: 482, height: PLATFORM_HEIGHT, level: 1, slopeDir: -1 });
-
-            // Level 2 - slight upward slope from left to right  
-            platforms.push({ x: 0, y: 290, width: 482, height: PLATFORM_HEIGHT, level: 2, slopeDir: 1 });
-
-            // Level 3 - slight upward slope from right to left
-            platforms.push({ x: 30, y: 230, width: 482, height: PLATFORM_HEIGHT, level: 3, slopeDir: -1 });
-
-            // Level 4 - slight upward slope from left to right
-            platforms.push({ x: 0, y: 170, width: 482, height: PLATFORM_HEIGHT, level: 4, slopeDir: 1 });
-
-            // Level 5 - Top (DK platform)
-            platforms.push({ x: 30, y: 110, width: 220, height: PLATFORM_HEIGHT, level: 5, slopeDir: 0 });
-
-            // Ladders - connecting platforms properly
-            // From ground to level 1
-            ladders.push({ x: 480, y: 350, width: 20, height: 60, bottomLevel: 0, topLevel: 1 });
-            ladders.push({ x: 100, y: 350, width: 20, height: 60, bottomLevel: 0, topLevel: 1 });
+            // 1. 플랫폼 생성 로직 (스테이지별 변형)
             
-            // From level 1 to level 2
-            ladders.push({ x: 50, y: 290, width: 20, height: 60, bottomLevel: 1, topLevel: 2 });
-            ladders.push({ x: 300, y: 290, width: 20, height: 60, bottomLevel: 1, topLevel: 2 });
-            
-            // From level 2 to level 3
-            ladders.push({ x: 450, y: 230, width: 20, height: 60, bottomLevel: 2, topLevel: 3 });
-            ladders.push({ x: 180, y: 230, width: 20, height: 60, bottomLevel: 2, topLevel: 3 });
-            
-            // From level 3 to level 4
-            ladders.push({ x: 80, y: 170, width: 20, height: 60, bottomLevel: 3, topLevel: 4 });
-            ladders.push({ x: 350, y: 170, width: 20, height: 60, bottomLevel: 3, topLevel: 4 });
-            
-            // From level 4 to level 5 (to reach Pauline)
-            ladders.push({ x: 200, y: 110, width: 20, height: 60, bottomLevel: 4, topLevel: 5 });
+            // Ground (Level 0) - 항상 바닥은 튼튼하게
+            platforms.push(createPlatform(0, platformY[0], CANVAS_WIDTH, 0, 1));
 
-            // Reset Mario
+            // 중간 층들 (Level 1~4)
+            for (let i = 1; i <= 4; i++) {
+                const y = platformY[i];
+                // 짝수 층은 오른쪽으로 흐름 (왼쪽이 높음), 홀수 층은 왼쪽으로 흐름
+                // 시각적 기울기는 캔버스 회전 없이 로직으로 처리 (direction)
+                const direction = (i % 2 === 0) ? 1 : -1; 
+                
+                // 스테이지 난이도에 따른 플랫폼 형태 변경
+                if (gameState.level === 1) {
+                    // Level 1: 클래식 지그재그
+                    if (direction === 1) { // 오른쪽으로 이동 -> 오른쪽에 구멍
+                        platforms.push(createPlatform(0, y, CANVAS_WIDTH - gapSize, i, direction));
+                        // 사다리 배치 (구멍 반대편)
+                        ladders.push(createLadder(50, y, platformGap));
+                        ladders.push(createLadder(CANVAS_WIDTH - 150, y, platformGap)); 
+                    } else { // 왼쪽으로 이동 -> 왼쪽에 구멍
+                        platforms.push(createPlatform(gapSize, y, CANVAS_WIDTH - gapSize, i, direction));
+                        // 사다리 배치
+                        ladders.push(createLadder(CANVAS_WIDTH - 70, y, platformGap));
+                        ladders.push(createLadder(150, y, platformGap));
+                    }
+                } else if (gameState.level >= 2) {
+                    // Level 2+: 중간 구멍 추가 (Swiss Cheese)
+                    const holeCount = Math.min(3, gameState.level); // 레벨이 높을수록 구멍 많아짐
+                    
+                    if (direction === 1) {
+                        // 오른쪽 끝 구멍은 필수 (떨어져야 하니까)
+                        let currentX = 0;
+                        const segmentWidth = (CANVAS_WIDTH - gapSize) / (holeCount + 1);
+                        
+                        for(let h=0; h <= holeCount; h++) {
+                            // 마지막 세그먼트가 아니면 중간에 구멍 뚫기
+                            let w = (h === holeCount) ? (CANVAS_WIDTH - gapSize - currentX) : (segmentWidth - 20);
+                            platforms.push(createPlatform(currentX, y, w, i, direction));
+                            
+                            // 사다리 랜덤 배치
+                            if(Math.random() > 0.3) {
+                                ladders.push(createLadder(currentX + w/2, y, platformGap));
+                            }
+                            
+                            currentX += w + 20; // 20px 중간 구멍
+                        }
+                    } else {
+                        // 왼쪽 끝 구멍 필수
+                        let currentX = gapSize;
+                        const totalWidth = CANVAS_WIDTH - gapSize;
+                        const segmentWidth = totalWidth / (holeCount + 1);
+
+                        for(let h=0; h <= holeCount; h++) {
+                             let w = (h === holeCount) ? (CANVAS_WIDTH - currentX) : (segmentWidth - 20);
+                             platforms.push(createPlatform(currentX, y, w, i, direction));
+                             
+                             if(Math.random() > 0.3) {
+                                ladders.push(createLadder(currentX + w/2, y, platformGap));
+                             }
+
+                             currentX += w + 20;
+                        }
+                    }
+                }
+            }
+
+            // Top Floor (Level 5) - DK & Pauline
+            platforms.push(createPlatform(0, platformY[5], 250, 5, 0));
+            // 마지막 사다리 (Pauline에게 가는 길)
+            ladders.push(createLadder(180, platformY[5], platformGap));
+            // 바닥 연결 사다리 보강
+            ladders.push(createLadder(400, platformY[1], platformGap));
+
+
+            // 캐릭터 초기화
             mario = {
-                x: 50,
-                y: 378,
+                x: 30,
+                y: platformY[0] - 32,
                 width: 24,
                 height: 32,
                 vx: 0,
                 vy: 0,
-                onGround: false,
+                onGround: true,
                 climbing: false,
                 facing: 1,
-                frame: 0,
-                currentPlatform: null
+                frame: 0
             };
 
-            // Donkey Kong position
             donkeyKong = {
-                x: 50,
-                y: 54,
+                x: 30,
+                y: platformY[5] - 56,
                 width: 64,
                 height: 56,
                 frame: 0,
                 throwTimer: 0
             };
 
-            // Pauline position
             pauline = {
-                x: 180,
-                y: 78,
+                x: 160,
+                y: platformY[5] - 32,
                 width: 24,
                 height: 32
             };
 
-            canJump = true;
+            jumpReleased = true;
         }
 
         function login() {
@@ -349,6 +396,10 @@
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
 
+            // 모바일 반응형 캔버스 크기 조정
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
             gameState.score = 0;
             gameState.lives = 3;
             gameState.level = 1;
@@ -357,6 +408,18 @@
             updateUI();
             initLevel();
             requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            // 비율 유지하면서 화면에 맞춤
+            const container = document.querySelector('.game-container');
+            const aspect = CANVAS_WIDTH / CANVAS_HEIGHT;
+            let w = container.clientWidth;
+            let h = w / aspect;
+            
+            // 캔버스 내부 해상도는 고정
+            canvas.style.width = '100%';
+            canvas.style.height = 'auto';
         }
 
         let lastTime = 0;
@@ -380,129 +443,142 @@
         }
 
         function updateMario() {
-            // Horizontal movement
-            if (!mario.climbing) {
-                if (keys.left) {
-                    mario.vx = -MOVE_SPEED;
-                    mario.facing = -1;
-                } else if (keys.right) {
-                    mario.vx = MOVE_SPEED;
-                    mario.facing = 1;
-                } else {
-                    mario.vx = 0;
-                }
+            // 사다리 판정 로직 개선
+            let currentLadder = null;
+            const marioCenter = mario.x + mario.width / 2;
+            const marioBottom = mario.y + mario.height;
 
-                // Apply gravity when not climbing
-                mario.vy += GRAVITY;
-                
-                // Limit fall speed
-                if (mario.vy > 10) mario.vy = 10;
-
-                // Jump - only when on ground and canJump is true
-                if (keys.jump && mario.onGround && canJump) {
-                    mario.vy = JUMP_FORCE;
-                    mario.onGround = false;
-                    canJump = false; // Prevent holding jump
-                }
-            } else {
-                // Climbing
-                mario.vx = 0;
-                mario.vy = 0;
-                
-                if (keys.up) {
-                    mario.y -= CLIMB_SPEED;
-                }
-                if (keys.down) {
-                    mario.y += CLIMB_SPEED;
-                }
-            }
-
-            // Reset canJump when key is released
-            if (!keys.jump) {
-                canJump = true;
-            }
-
-            // Check ladder
-            let onLadder = null;
             for (let ladder of ladders) {
-                if (mario.x + mario.width > ladder.x + 2 && 
-                    mario.x < ladder.x + ladder.width - 2 &&
-                    mario.y + mario.height > ladder.y &&
-                    mario.y + mario.height < ladder.y + ladder.height + 20) {
-                    onLadder = ladder;
+                const ladderCenter = ladder.x + ladder.width / 2;
+                
+                // 사다리 범위 체크 (가로: 중심 근처, 세로: 사다리 전체 높이 + 약간의 여유)
+                if (Math.abs(marioCenter - ladderCenter) < 15 &&
+                    marioBottom >= ladder.y - 5 && 
+                    marioBottom <= ladder.y + ladder.height + 5) {
+                    currentLadder = ladder;
                     break;
                 }
             }
 
-            // Start/stop climbing
-            if (onLadder && (keys.up || keys.down)) {
-                mario.climbing = true;
-                mario.x = onLadder.x + onLadder.width / 2 - mario.width / 2;
-            }
-            
-            // Stop climbing when reaching top or bottom of ladder
-            if (mario.climbing && onLadder) {
-                if (mario.y + mario.height <= onLadder.y + 5) {
-                    // Reached top
+            if (mario.climbing) {
+                mario.vx = 0;
+                mario.vy = 0;
+
+                if (keys.up) {
+                    mario.y -= CLIMB_SPEED;
+                    mario.frame = (mario.frame + 0.1) % 4;
+                }
+                if (keys.down) {
+                    mario.y += CLIMB_SPEED;
+                    mario.frame = (mario.frame + 0.1) % 4;
+                }
+
+                // 사다리 정상 도착
+                if (currentLadder && marioBottom <= ladderTop(currentLadder) + 2) {
+                    mario.y = ladderTop(currentLadder) - mario.height;
                     mario.climbing = false;
-                    mario.y = onLadder.y - mario.height;
                     mario.onGround = true;
                 }
-                if (mario.y + mario.height >= onLadder.y + onLadder.height) {
-                    // Reached bottom
+
+                // 사다리 바닥 도착 (내려올 때)
+                if (currentLadder && marioBottom >= ladderBottom(currentLadder)) {
+                    mario.climbing = false;
+                    mario.onGround = true; // 바닥에 닿았다고 가정
+                }
+                
+                // 사다리 영역을 완전히 벗어나면 추락
+                if (!currentLadder) {
                     mario.climbing = false;
                 }
-            }
-            
-            if (!onLadder && mario.climbing) {
-                mario.climbing = false;
-            }
 
-            // Apply velocity
-            mario.x += mario.vx;
-            mario.y += mario.vy;
+                if (keys.left || keys.right) {
+                    // 사다리에서 옆으로 내리기 (바닥이 있을 때만 허용해야 안전하지만 고전 게임 느낌 살림)
+                    mario.climbing = false;
+                }
 
-            // Platform collision
-            if (!mario.climbing) {
+            } else {
+                // 좌우 이동
+                if (keys.left) {
+                    mario.vx = -MOVE_SPEED;
+                    mario.facing = -1;
+                    mario.frame = (mario.frame + 0.15) % 4;
+                } else if (keys.right) {
+                    mario.vx = MOVE_SPEED;
+                    mario.facing = 1;
+                    mario.frame = (mario.frame + 0.15) % 4;
+                } else {
+                    mario.vx = 0;
+                }
+
+                mario.vy += GRAVITY;
+                if (mario.vy > 12) mario.vy = 12;
+
+                // 점프
+                if (keys.jump && mario.onGround && jumpReleased) {
+                    mario.vy = JUMP_FORCE;
+                    mario.onGround = false;
+                    jumpReleased = false;
+                }
+
+                // 사다리 타기 시작 (위로)
+                if (currentLadder && keys.up) {
+                    mario.x = currentLadder.x + currentLadder.width / 2 - mario.width / 2;
+                    mario.climbing = true;
+                    mario.vy = 0;
+                }
+
+                // 사다리 타기 시작 (아래로)
+                if (keys.down && mario.onGround) {
+                     // 발 아래 사다리가 있는지 확인
+                     for (let ladder of ladders) {
+                        const ladderCenter = ladder.x + ladder.width / 2;
+                        if (Math.abs(marioCenter - ladderCenter) < 15 &&
+                            Math.abs(marioBottom - ladder.y) < 10) {
+                            mario.x = ladderCenter - mario.width / 2;
+                            mario.climbing = true;
+                            mario.onGround = false;
+                            mario.y += 5; // 살짝 내려가서 즉시 다시 올라오지 않게
+                            break;
+                        }
+                    }
+                }
+
+                mario.x += mario.vx;
+                mario.y += mario.vy;
+
+                // 플랫폼 충돌 감지
                 mario.onGround = false;
-                
                 for (let platform of platforms) {
-                    // Check if Mario is landing on platform
-                    if (mario.vy >= 0 &&
+                    if (mario.vy >= 0 && // 떨어지는 중일 때만
                         mario.x + mario.width > platform.x &&
                         mario.x < platform.x + platform.width &&
                         mario.y + mario.height >= platform.y &&
-                        mario.y + mario.height <= platform.y + 20) {
+                        mario.y + mario.height <= platform.y + 16) { // 관용 범위
                         
                         mario.y = platform.y - mario.height;
                         mario.vy = 0;
                         mario.onGround = true;
-                        mario.currentPlatform = platform;
                         break;
                     }
                 }
             }
 
-            // Screen bounds
+            if (!keys.jump) jumpReleased = true;
+
+            // 화면 경계 체크
             if (mario.x < 0) mario.x = 0;
             if (mario.x > CANVAS_WIDTH - mario.width) mario.x = CANVAS_WIDTH - mario.width;
             
-            // Fall off screen
-            if (mario.y > CANVAS_HEIGHT) {
-                loseLife();
-            }
-
-            // Animation frame
-            if (mario.vx !== 0 || mario.climbing) {
-                mario.frame = (mario.frame + 0.15) % 4;
-            }
+            if (mario.y > CANVAS_HEIGHT) loseLife();
         }
+
+        function ladderTop(l) { return l.y; }
+        function ladderBottom(l) { return l.y + l.height; }
 
         function updateDonkeyKong() {
             donkeyKong.throwTimer++;
-            
-            // Throw barrel every 2-3 seconds depending on level
-            const throwInterval = Math.max(60, 150 - gameState.level * 20);
+            // 레벨이 오를수록 던지는 속도 빨라짐
+            const throwInterval = Math.max(60, 150 - gameState.level * 15);
             
             if (donkeyKong.throwTimer >= throwInterval) {
                 throwBarrel();
@@ -512,17 +588,18 @@
         }
 
         function throwBarrel() {
+            // DK 바로 옆에서 생성
             barrels.push({
-                x: donkeyKong.x + 50,
-                y: donkeyKong.y + 40,
+                x: donkeyKong.x + 60,
+                y: donkeyKong.y + 20, 
                 width: 16,
-                height: 14,
-                vx: 2,
+                height: 16,
+                vx: 3 + gameState.level * 0.5,
                 vy: 0,
                 onGround: false,
                 frame: 0,
-                currentLevel: 5,
-                scored: false
+                scored: false,
+                falling: true
             });
         }
 
@@ -530,87 +607,116 @@
             for (let i = barrels.length - 1; i >= 0; i--) {
                 let barrel = barrels[i];
 
-                // Apply gravity
-                barrel.vy += GRAVITY * 0.8;
-                if (barrel.vy > 8) barrel.vy = 8;
+                // 중력 적용
+                if (!barrel.onGround) {
+                    barrel.vy += GRAVITY;
+                    if (barrel.vy > 10) barrel.vy = 10;
+                }
 
-                // Move barrel
-                barrel.x += barrel.vx;
+                // X축 이동 (벽 충돌 처리 핵심)
+                let nextX = barrel.x + barrel.vx;
+                
+                // 1. 벽 충돌 (Bounce Logic) - 드럼통이 벽을 뚫지 않게 함
+                if (nextX <= 0) {
+                    barrel.x = 0;
+                    barrel.vx = Math.abs(barrel.vx); // 오른쪽으로 튕김
+                } else if (nextX + barrel.width >= CANVAS_WIDTH) {
+                    barrel.x = CANVAS_WIDTH - barrel.width;
+                    barrel.vx = -Math.abs(barrel.vx); // 왼쪽으로 튕김
+                } else {
+                    barrel.x = nextX;
+                }
+
                 barrel.y += barrel.vy;
 
-                // Platform collision for barrels
+                // 회전 애니메이션
+                barrel.frame = (barrel.frame + Math.abs(barrel.vx) * 0.1) % 4;
+
+                // 플랫폼 충돌 검사
+                let wasOnGround = barrel.onGround;
                 barrel.onGround = false;
-                
+
                 for (let platform of platforms) {
-                    if (barrel.vy >= 0 &&
-                        barrel.x + barrel.width > platform.x &&
-                        barrel.x < platform.x + platform.width &&
+                    // 배럴의 발이 플랫폼 높이 근처에 있고, 배럴이 플랫폼 위에 수평적으로 위치하는지
+                    if (barrel.vy >= 0 && // 떨어지는 중
+                        barrel.x + barrel.width > platform.x && // 왼쪽 경계
+                        barrel.x < platform.x + platform.width && // 오른쪽 경계
                         barrel.y + barrel.height >= platform.y &&
-                        barrel.y + barrel.height <= platform.y + 15) {
+                        barrel.y + barrel.height <= platform.y + 20) { // 플랫폼 착지
                         
                         barrel.y = platform.y - barrel.height;
                         barrel.vy = 0;
                         barrel.onGround = true;
                         
-                        // Set direction based on platform slope
-                        if (platform.slopeDir === -1) {
-                            barrel.vx = -2 - gameState.level * 0.3;
-                        } else if (platform.slopeDir === 1) {
-                            barrel.vx = 2 + gameState.level * 0.3;
+                        // 플랫폼 방향에 따라 가속 또는 방향 전환
+                        // level이 0이 아니면(땅바닥 제외) 플랫폼 방향으로 이동
+                        if (platform.level > 0) {
+                            const speed = 2 + gameState.level * 0.3;
+                            // 플랫폼이 기울어진 방향으로 vx 설정
+                            // 만약 이미 그 방향으로 가고 있다면 가속, 아니면 전환
+                            // 여기서는 단순하게 플랫폼 방향으로 강제
+                            if (platform.direction !== 0) {
+                                barrel.vx = platform.direction * speed;
+                            }
+                        } else {
+                            // 땅바닥(Level 0)에서는 굴러오던 방향 유지
+                            if (Math.abs(barrel.vx) < 1) barrel.vx = (Math.random() > 0.5 ? 2 : -2);
                         }
-                        
-                        barrel.currentLevel = platform.level;
                         break;
                     }
                 }
 
-                // Check if barrel should fall to next platform
-                // When barrel reaches edge of platform, it falls
-                if (barrel.onGround) {
-                    let onAnyPlatform = false;
-                    for (let platform of platforms) {
-                        if (barrel.x + barrel.width > platform.x &&
-                            barrel.x < platform.x + platform.width &&
-                            Math.abs((barrel.y + barrel.height) - platform.y) < 5) {
-                            onAnyPlatform = true;
-                            break;
-                        }
-                    }
-                    if (!onAnyPlatform) {
-                        barrel.onGround = false;
-                    }
+                // 플랫폼을 벗어나면 추락 상태로 변경 (구멍에 빠짐)
+                if (wasOnGround && !barrel.onGround) {
+                    // 구멍으로 떨어질 때 약간의 수평 속도 유지
+                    // 하지만 벽에 부딪혀서 떨어진 경우는 vx가 반전되었을 것임
                 }
 
-                // Remove barrel if off screen
-                if (barrel.y > CANVAS_HEIGHT + 50 || barrel.x < -50 || barrel.x > CANVAS_WIDTH + 50) {
+                // 화면 아래로 나가면 제거 (성공적으로 떨어진 배럴)
+                if (barrel.y > CANVAS_HEIGHT) {
                     barrels.splice(i, 1);
                     continue;
                 }
 
-                // Barrel animation
-                barrel.frame = (barrel.frame + Math.abs(barrel.vx) * 0.1) % 4;
-
-                // Collision with Mario
+                // 마리오 충돌
                 if (checkCollision(mario, barrel)) {
                     barrels.splice(i, 1);
                     loseLife();
                     continue;
                 }
 
-                // Score for jumping over barrel
+                // 점수 획득 (뛰어넘기)
                 if (!barrel.scored && 
+                    !mario.climbing &&
                     mario.y + mario.height < barrel.y &&
-                    Math.abs(mario.x - barrel.x) < 30 &&
-                    !mario.onGround) {
+                    Math.abs((mario.x + mario.width/2) - (barrel.x + barrel.width/2)) < 20) {
                     barrel.scored = true;
                     gameState.score += 100;
+                    createScoreEffect(barrel.x, barrel.y, 100);
                     updateUI();
                 }
             }
         }
 
+        // 점수 이펙트 (간단한 시각 효과)
+        let scoreEffects = [];
+        function createScoreEffect(x, y, score) {
+            scoreEffects.push({x, y, text: score, timer: 30});
+        }
+        function drawScoreEffects() {
+            ctx.fillStyle = '#ffff00';
+            ctx.font = '10px "Press Start 2P"';
+            for(let i=scoreEffects.length-1; i>=0; i--) {
+                let effect = scoreEffects[i];
+                ctx.fillText(effect.text, effect.x, effect.y);
+                effect.y -= 1;
+                effect.timer--;
+                if(effect.timer <= 0) scoreEffects.splice(i, 1);
+            }
+        }
+
         function checkCollision(a, b) {
-            const padding = 4;
+            const padding = 6; // 충돌 판정 약간 완화
             return a.x + padding < b.x + b.width - padding &&
                    a.x + a.width - padding > b.x + padding &&
                    a.y + padding < b.y + b.height - padding &&
@@ -627,18 +733,22 @@
             gameState.lives--;
             updateUI();
             barrels = [];
+            
+            // 화면 흔들림 효과
+            canvas.style.transform = 'translate(5px, 5px)';
+            setTimeout(() => canvas.style.transform = 'translate(-5px, -5px)', 50);
+            setTimeout(() => canvas.style.transform = 'none', 100);
 
             if (gameState.lives <= 0) {
                 gameOver();
             } else {
-                // Reset Mario position
-                mario.x = 50;
-                mario.y = 378;
+                mario.x = 30;
+                mario.y = 420 - 32; // Ground Level
                 mario.vx = 0;
                 mario.vy = 0;
-                mario.onGround = false;
+                mario.onGround = true;
                 mario.climbing = false;
-                canJump = true;
+                jumpReleased = true;
             }
         }
 
@@ -668,117 +778,125 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Drawing functions
         function draw() {
-            // Clear canvas
+            // 배경
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-            // Draw platforms
+            // 플랫폼
             for (let platform of platforms) {
                 drawPlatform(platform);
             }
 
-            // Draw ladders
+            // 사다리
             for (let ladder of ladders) {
                 drawLadder(ladder);
             }
 
-            // Draw Donkey Kong
             drawDonkeyKong();
-
-            // Draw Pauline
             drawPauline();
 
-            // Draw barrels
             for (let barrel of barrels) {
                 drawBarrel(barrel);
             }
 
-            // Draw Mario
             drawMario();
+            drawScoreEffects();
 
-            // Draw "HELP!" text
-            ctx.fillStyle = '#ff69b4';
-            ctx.font = '10px "Press Start 2P"';
-            ctx.fillText('HELP!', pauline.x - 5, pauline.y - 10);
+            // HELP! 텍스트
+            if (Math.floor(Date.now() / 500) % 2 === 0) {
+                ctx.fillStyle = '#ff69b4';
+                ctx.font = '10px "Press Start 2P"';
+                ctx.fillText('HELP!', pauline.x - 5, pauline.y - 10);
+            }
         }
 
         function drawPlatform(platform) {
-            ctx.fillStyle = '#e74c3c';
+            ctx.fillStyle = '#e74c3c'; // 메인 컬러
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
             
-            // Draw girder pattern
-            ctx.fillStyle = '#c0392b';
-            for (let i = 0; i < platform.width; i += 16) {
-                ctx.fillRect(platform.x + i, platform.y, 8, platform.height);
+            // 철골 디테일
+            ctx.fillStyle = '#c0392b'; // 그림자
+            ctx.fillRect(platform.x, platform.y + 4, platform.width, platform.height - 8);
+            
+            // 트러스 구조 무늬
+            ctx.fillStyle = '#a93226';
+            for (let i = 0; i < platform.width; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(platform.x + i, platform.y);
+                ctx.lineTo(platform.x + i + 10, platform.y + platform.height);
+                ctx.stroke(); // 선만 그림
             }
         }
 
         function drawLadder(ladder) {
             ctx.fillStyle = '#3498db';
-            // Sides
-            ctx.fillRect(ladder.x, ladder.y, 3, ladder.height);
-            ctx.fillRect(ladder.x + ladder.width - 3, ladder.y, 3, ladder.height);
-            // Rungs
-            for (let i = 5; i < ladder.height; i += 10) {
+            ctx.fillRect(ladder.x, ladder.y, 4, ladder.height);
+            ctx.fillRect(ladder.x + ladder.width - 4, ladder.y, 4, ladder.height);
+            
+            for (let i = 4; i < ladder.height; i += 10) {
                 ctx.fillRect(ladder.x, ladder.y + i, ladder.width, 2);
             }
         }
 
         function drawMario() {
             ctx.save();
-            ctx.translate(mario.x + mario.width / 2, mario.y + mario.height / 2);
+            ctx.translate(Math.floor(mario.x + mario.width / 2), Math.floor(mario.y + mario.height / 2));
             
             if (mario.facing === -1) {
                 ctx.scale(-1, 1);
             }
 
-            // Cap
-            ctx.fillStyle = '#e74c3c';
-            ctx.fillRect(-10, -16, 18, 6);
-            ctx.fillRect(-8, -18, 12, 4);
+            // Classic Mario Colors
+            const red = '#e74c3c';
+            const skin = '#f5b041';
+            const blue = '#3498db';
+            const brown = '#4a2c00';
+
+            // Running Animation Offset
+            let runOffset = 0;
+            if (Math.abs(mario.vx) > 0 || mario.climbing) {
+                runOffset = Math.floor(mario.frame) % 2 === 0 ? -1 : 1;
+            }
+
+            // Body
+            ctx.fillStyle = blue;
+            ctx.fillRect(-6, 2, 12, 10); // Overalls
+
+            // Shirt
+            ctx.fillStyle = red;
+            ctx.fillRect(-7, -4, 14, 6);
+            ctx.fillRect(-9, -2, 18, 4); // Arms
 
             // Head
-            ctx.fillStyle = '#f5b041';
-            ctx.fillRect(-8, -10, 14, 10);
+            ctx.fillStyle = skin;
+            ctx.fillRect(-6, -14, 12, 10);
 
-            // Hair/sideburns
-            ctx.fillStyle = '#4a2c00';
-            ctx.fillRect(-8, -10, 3, 4);
+            // Hat
+            ctx.fillStyle = red;
+            ctx.fillRect(-7, -16, 16, 4);
+            ctx.fillRect(2, -16, 8, 4); // Brim
 
-            // Eye
-            ctx.fillStyle = '#000';
-            ctx.fillRect(2, -8, 3, 3);
-
-            // Mustache
-            ctx.fillStyle = '#4a2c00';
-            ctx.fillRect(-2, -2, 10, 3);
-
-            // Body (shirt)
-            ctx.fillStyle = '#e74c3c';
-            ctx.fillRect(-8, 0, 16, 8);
-
-            // Overalls
-            ctx.fillStyle = '#3498db';
-            ctx.fillRect(-8, 6, 16, 10);
+            // Hair & Mustache
+            ctx.fillStyle = brown;
+            ctx.fillRect(-7, -12, 4, 3); // Sideburns
+            ctx.fillRect(0, -8, 8, 3); // Mustache
             
-            // Overall straps
-            ctx.fillRect(-6, 2, 4, 6);
-            ctx.fillRect(2, 2, 4, 6);
+            // Eye
+            ctx.fillStyle = 'black';
+            ctx.fillRect(2, -12, 2, 2);
 
-            // Legs with animation
+            // Legs
+            ctx.fillStyle = blue;
             if (mario.climbing) {
-                let climbOffset = Math.floor(mario.frame) % 2 === 0 ? -2 : 2;
-                ctx.fillRect(-7 + climbOffset, 12, 6, 6);
-                ctx.fillRect(1 - climbOffset, 12, 6, 6);
-            } else if (Math.abs(mario.vx) > 0) {
-                let legOffset = Math.floor(mario.frame) % 2 === 0 ? 0 : 3;
-                ctx.fillRect(-7, 12, 6, 4 + legOffset);
-                ctx.fillRect(1, 12, 6, 4 + (3 - legOffset));
-            } else {
-                ctx.fillRect(-7, 12, 6, 6);
-                ctx.fillRect(1, 12, 6, 6);
+                ctx.fillRect(-7, 12 + runOffset, 5, 4);
+                ctx.fillRect(2, 12 - runOffset, 5, 4);
+            } else if (!mario.onGround) { // Jumping
+                ctx.fillRect(-8, 10, 6, 6);
+                ctx.fillRect(4, 8, 6, 6);
+            } else { // Running/Standing
+                ctx.fillRect(-7 - runOffset, 12, 5, 4);
+                ctx.fillRect(2 + runOffset, 12, 5, 4);
             }
 
             ctx.restore();
@@ -788,42 +906,47 @@
             ctx.save();
             ctx.translate(donkeyKong.x, donkeyKong.y);
 
-            // Body
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(12, 18, 40, 32);
+            // Simple DK Sprite Art
+            ctx.fillStyle = '#8B4513'; // Brown Fur
+            
+            // Body depends on animation
+            if (donkeyKong.frame === 0) { // Standing
+                ctx.fillRect(10, 20, 44, 30);
+                // Arms
+                ctx.fillRect(0, 25, 10, 25);
+                ctx.fillRect(54, 25, 10, 25);
+            } else { // Throwing
+                ctx.fillRect(10, 20, 44, 30);
+                // Arms Up
+                ctx.fillRect(0, 10, 10, 25);
+                ctx.fillRect(54, 10, 10, 25);
+            }
 
             // Head
-            ctx.fillRect(16, 0, 32, 22);
-
+            ctx.fillRect(16, 0, 32, 20);
+            
             // Face
             ctx.fillStyle = '#DEB887';
-            ctx.fillRect(20, 4, 24, 16);
-
-            // Eyes
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(22, 6, 8, 6);
-            ctx.fillRect(34, 6, 8, 6);
-            ctx.fillStyle = '#000';
-            ctx.fillRect(26, 8, 3, 3);
-            ctx.fillRect(38, 8, 3, 3);
-
-            // Mouth
-            ctx.fillStyle = '#000';
-            ctx.fillRect(28, 15, 8, 3);
-
-            // Arms with animation
-            ctx.fillStyle = '#8B4513';
-            let armOffset = donkeyKong.frame === 0 ? 0 : 5;
-            ctx.fillRect(2, 22 - armOffset, 12, 18);
-            ctx.fillRect(50, 22 + armOffset, 12, 18);
+            ctx.fillRect(20, 5, 24, 12);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(24, 7, 6, 4);
+            ctx.fillRect(34, 7, 6, 4);
+            ctx.fillStyle = 'black';
+            ctx.fillRect(26, 8, 2, 2);
+            ctx.fillRect(36, 8, 2, 2);
 
             // Chest
             ctx.fillStyle = '#DEB887';
-            ctx.fillRect(20, 22, 24, 12);
+            ctx.fillRect(22, 25, 20, 15);
 
             // Tie
-            ctx.fillStyle = '#e74c3c';
-            ctx.fillRect(28, 22, 8, 14);
+            ctx.fillStyle = 'red';
+            ctx.fillRect(30, 25, 6, 12);
+            ctx.beginPath();
+            ctx.moveTo(30, 37);
+            ctx.lineTo(33, 42);
+            ctx.lineTo(36, 37);
+            ctx.fill();
 
             ctx.restore();
         }
@@ -831,34 +954,29 @@
         function drawPauline() {
             ctx.save();
             ctx.translate(pauline.x, pauline.y);
-
-            // Hair
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(4, 0, 16, 6);
-            ctx.fillRect(2, 4, 4, 10);
-            ctx.fillRect(18, 4, 4, 10);
-
-            // Head
-            ctx.fillStyle = '#f5b041';
-            ctx.fillRect(6, 2, 12, 12);
-
-            // Eyes
-            ctx.fillStyle = '#000';
-            ctx.fillRect(8, 6, 2, 2);
-            ctx.fillRect(14, 6, 2, 2);
-
-            // Lips
-            ctx.fillStyle = '#e74c3c';
-            ctx.fillRect(10, 10, 4, 2);
-
+            
             // Dress
             ctx.fillStyle = '#ff69b4';
-            ctx.fillRect(4, 14, 16, 18);
-
-            // Arms
+            ctx.fillRect(6, 14, 12, 18);
+            
+            // Face
             ctx.fillStyle = '#f5b041';
-            ctx.fillRect(0, 14, 4, 10);
-            ctx.fillRect(20, 14, 4, 10);
+            ctx.fillRect(8, 2, 8, 8);
+            
+            // Hair
+            ctx.fillStyle = '#5d4037';
+            ctx.fillRect(6, 0, 12, 4);
+            ctx.fillRect(4, 2, 4, 10);
+            ctx.fillRect(16, 2, 4, 10);
+            
+            // Help Wave Animation
+            if (Math.floor(Date.now() / 200) % 2 === 0) {
+                 ctx.fillStyle = '#f5b041';
+                 ctx.fillRect(18, 14, 4, 8); // Arm Up
+            } else {
+                 ctx.fillStyle = '#f5b041';
+                 ctx.fillRect(18, 18, 4, 8); // Arm Down
+            }
 
             ctx.restore();
         }
@@ -868,18 +986,22 @@
             ctx.translate(barrel.x + barrel.width / 2, barrel.y + barrel.height / 2);
             ctx.rotate(barrel.frame * Math.PI / 2);
 
-            // Barrel body
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-8, -7, 16, 14);
+            ctx.fillStyle = '#8d6e63';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
 
-            // Barrel bands
-            ctx.fillStyle = '#f39c12';
-            ctx.fillRect(-8, -7, 16, 2);
-            ctx.fillRect(-8, 5, 16, 2);
+            ctx.strokeStyle = '#d7ccc8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.stroke();
 
-            // Center marking
-            ctx.fillStyle = '#5D3A1A';
-            ctx.fillRect(-3, -3, 6, 6);
+            ctx.fillStyle = '#5d4037';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('DK', 0, 1);
 
             ctx.restore();
         }
@@ -890,7 +1012,7 @@
             document.getElementById('levelDisplay').textContent = gameState.level;
         }
 
-        // Firebase functions
+        // Firebase & Storage Logic
         function saveScore() {
             const scoreData = {
                 name: player.name,
@@ -934,10 +1056,13 @@
                     .then(snapshot => {
                         const scores = [];
                         snapshot.forEach(child => scores.push(child.val()));
-                        scores.reverse();
+                        scores.reverse(); // 내림차순 정렬
                         displayLeaderboard(scores);
                     })
-                    .catch(e => displayLeaderboard(JSON.parse(localStorage.getItem('dkScores') || '[]')));
+                    .catch(e => {
+                        console.error(e);
+                        displayLeaderboard(JSON.parse(localStorage.getItem('dkScores') || '[]'));
+                    });
             } else {
                 displayLeaderboard(JSON.parse(localStorage.getItem('dkScores') || '[]'));
             }
@@ -945,6 +1070,9 @@
 
         function displayLeaderboard(scores) {
             const listEl = document.getElementById('leaderboardList');
+
+            // 점수 내림차순 정렬 재확인
+            scores.sort((a, b) => b.score - a.score);
 
             if (scores.length === 0) {
                 listEl.innerHTML = '<p class="text-center text-gray-500 text-xs">No scores yet!</p>';
@@ -984,74 +1112,34 @@
         function restartGame() {
             document.getElementById('gameOverModal').classList.add('hidden');
             document.getElementById('victoryModal').classList.add('hidden');
-            gameState.score = 0;
-            gameState.lives = 3;
-            gameState.level = 1;
-            gameState.isRunning = true;
-            initLevel();
-            updateUI();
-            lastTime = performance.now();
-            requestAnimationFrame(gameLoop);
+            startGame(); // 완전 재시작
         }
 
-        // Keyboard controls
+        // 키보드 컨트롤
         document.addEventListener('keydown', (e) => {
+            if (!gameState.isRunning) return;
             switch(e.key) {
-                case 'ArrowLeft':
-                case 'a':
-                    keys.left = true;
-                    break;
-                case 'ArrowRight':
-                case 'd':
-                    keys.right = true;
-                    break;
-                case 'ArrowUp':
-                case 'w':
-                    keys.up = true;
-                    break;
-                case 'ArrowDown':
-                case 's':
-                    keys.down = true;
-                    break;
-                case ' ':
-                    keys.jump = true;
-                    e.preventDefault();
-                    break;
+                case 'ArrowLeft': case 'a': keys.left = true; break;
+                case 'ArrowRight': case 'd': keys.right = true; break;
+                case 'ArrowUp': case 'w': keys.up = true; break;
+                case 'ArrowDown': case 's': keys.down = true; break;
+                case ' ': keys.jump = true; break;
             }
         });
 
         document.addEventListener('keyup', (e) => {
             switch(e.key) {
-                case 'ArrowLeft':
-                case 'a':
-                    keys.left = false;
-                    break;
-                case 'ArrowRight':
-                case 'd':
-                    keys.right = false;
-                    break;
-                case 'ArrowUp':
-                case 'w':
-                    keys.up = false;
-                    break;
-                case 'ArrowDown':
-                case 's':
-                    keys.down = false;
-                    break;
-                case ' ':
-                    keys.jump = false;
-                    break;
+                case 'ArrowLeft': case 'a': keys.left = false; break;
+                case 'ArrowRight': case 'd': keys.right = false; break;
+                case 'ArrowUp': case 'w': keys.up = false; break;
+                case 'ArrowDown': case 's': keys.down = false; break;
+                case ' ': keys.jump = false; break;
             }
         });
 
-        // Mobile controls
-        function mobileControl(dir) {
-            keys[dir] = true;
-        }
-
-        function mobileControlEnd(dir) {
-            keys[dir] = false;
-        }
+        // 모바일 컨트롤
+        function mobileControl(dir) { keys[dir] = true; }
+        function mobileControlEnd(dir) { keys[dir] = false; }
     </script>
 </body>
 </html>
