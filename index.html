@@ -682,7 +682,7 @@
                 if (checkCollision(mario, barrel)) {
                     barrels.splice(i, 1);
                     loseLife();
-                    continue;
+                    return; // *** 버그 수정: loseLife()가 배열을 비우므로 즉시 리턴해야 함 ***
                 }
 
                 // 점수 획득 (뛰어넘기)
