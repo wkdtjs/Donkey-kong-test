@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donkey Kong (1981) - Retro Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        * {
+            font-family: 'Press Start 2P', cursive;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+        }
+        
+        .game-container {
+            image-rendering: pixelated;
+        }
+        
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        
+        .pixel-border {
+            border: 4px solid #f39c12;
+            box-shadow: 0 0 0 4px #c0392b, 0 0 20px rgba(243, 156, 18, 0.5);
+        }
+        
+        .retro-btn {
+            background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+            border: 3px solid #f39c12;
+            text-shadow: 2px 2px 0 #000;
+            transition: all 0.1s;
+        }
+        
+        .retro-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(243, 156, 18, 0.7);
+        }
+        
+        .retro-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 10px #f39c12, 0 0 20px #f39c12, 0 0 30px #f39c12;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        .leaderboard-row:nth-child(odd) {
+            background: rgba(243, 156, 18, 0.1);
+        }
+        
+        .leaderboard-row:nth-child(even) {
+            background: rgba(231, 76, 60, 0.1);
+        }
+    </style>
+</head>
+<body class="text-white overflow-x-hidden">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-gray-900 pixel-border rounded-lg p-8 max-w-md w-full">
+            <h1 class="text-2xl text-yellow-400 glow-text text-center mb-2">DONKEY KONG</h1>
+            <p class="text-xs text-red-500 text-center mb-8">~ 1981 EDITION ~</p>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="text-xs text-yellow-400 block mb-2">PLAYER NAME</label>
+                    <input type="text" id="playerName" 
+                           class="w-full bg-gray-800 border-2 border-yellow-600 rounded p-3 text-white text-sm focus:outline-none focus:border-yellow-400"
+                           placeholder="Enter name..." maxlength="12">
+                </div>
+                
+                <div>
+                    <label class="text-xs text-yellow-400 block mb-2">STUDENT ID</label>
+                    <input type="text" id="studentId" 
+                           class="w-full bg-gray-800 border-2 border-yellow-600 rounded p-3 text-white text-sm focus:outline-none focus:border-yellow-400"
+                           placeholder="Enter ID..." maxlength="15">
+                </div>
+                
+                <button onclick="login()" class="retro-btn w-full py-4 rounded text-white text-sm">
+                    START GAME
+                </button>
+                
+                <button onclick="showLeaderboard()" class="retro-btn w-full py-3 rounded text-white text-xs bg-gradient-to-b from-blue-600 to-blue-800">
+                    VIEW LEADERBOARD
+                </button>
+            </div>
+            
+            <div class="mt-6 text-center">
+                <p class="text-xs text-gray-500">Use ARROW KEYS to move</p>
+                <p class="text-xs text-gray-500">SPACE to jump</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="hidden min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="mb-4 flex items-center gap-8">
+            <div class="text-center">
+                <p class="text-xs text-yellow-400">PLAYER</p>
+                <p id="displayName" class="text-sm text-white">---</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-yellow-400">SCORE</p>
+                <p id="scoreDisplay" class="text-xl text-red-500 glow-text">0</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-yellow-400">LIVES</p>
+                <p id="livesDisplay" class="text-xl text-red-500">❤❤❤</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-yellow-400">LEVEL</p>
+                <p id="levelDisplay" class="text-xl text-white">1</p>
+            </div>
+        </div>
+        
+        <div class="game-container pixel-border rounded">
+            <canvas id="gameCanvas" width="512" height="448"></canvas>
+        </div>
+        
+        <div class="mt-4 flex gap-4">
+            <button onclick="restartGame()" class="retro-btn px-6 py-2 rounded text-xs">RESTART</button>
+            <button onclick="backToMenu()" class="retro-btn px-6 py-2 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800">MENU</button>
+        </div>
+        
+        <!-- Mobile Controls -->
+        <div class="mt-4 md:hidden grid grid-cols-3 gap-2 w-48">
+            <div></div>
+            <button ontouchstart="mobileControl('up')" ontouchend="mobileControlEnd('up')" class="retro-btn p-4 rounded text-lg">▲</button>
+            <div></div>
+            <button ontouchstart="mobileControl('left')" ontouchend="mobileControlEnd('left')" class="retro-btn p-4 rounded text-lg">◀</button>
+            <button ontouchstart="mobileControl('jump')" ontouchend="mobileControlEnd('jump')" class="retro-btn p-4 rounded text-xs">JUMP</button>
+            <button ontouchstart="mobileControl('right')" ontouchend="mobileControlEnd('right')" class="retro-btn p-4 rounded text-lg">▶</button>
+        </div>
+    </div>
+
+    <!-- Leaderboard Screen -->
+    <div id="leaderboardScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="bg-gray-900 pixel-border rounded-lg p-6 max-w-lg w-full">
+            <h2 class="text-xl text-yellow-400 glow-text text-center mb-6">HIGH SCORES</h2>
+            
+            <div class="space-y-2 max-h-96 overflow-y-auto" id="leaderboardList">
+                <p class="text-center text-gray-500 text-xs">Loading...</p>
+            </div>
+            
+            <button onclick="backToLogin()" class="retro-btn w-full py-3 rounded text-white text-xs mt-6">
+                BACK TO MENU
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+        <div class="bg-gray-900 pixel-border rounded-lg p-8 text-center">
+            <h2 class="text-2xl text-red-500 glow-text mb-4">GAME OVER</h2>
+            <p class="text-yellow-400 text-sm mb-2">FINAL SCORE</p>
+            <p id="finalScore" class="text-3xl text-white mb-6">0</p>
+            <div class="space-y-3">
+                <button onclick="restartGame()" class="retro-btn w-full py-3 rounded text-sm">PLAY AGAIN</button>
+                <button onclick="backToMenu()" class="retro-btn w-full py-3 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victoryModal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+        <div class="bg-gray-900 pixel-border rounded-lg p-8 text-center">
+            <h2 class="text-2xl text-yellow-400 glow-text mb-4">VICTORY!</h2>
+            <p class="text-green-400 text-sm mb-2">YOU SAVED PAULINE!</p>
+            <p class="text-yellow-400 text-sm mb-2">SCORE</p>
+            <p id="victoryScore" class="text-3xl text-white mb-6">0</p>
+            <div class="space-y-3">
+                <button onclick="nextLevel()" class="retro-btn w-full py-3 rounded text-sm">NEXT LEVEL</button>
+                <button onclick="backToMenu()" class="retro-btn w-full py-3 rounded text-xs bg-gradient-to-b from-gray-600 to-gray-800">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration - Replace with your own config
+        const firebaseConfig = {
+		  apiKey: "AIzaSyCnPNUCMQlQmPJJ3C76agBWv6zcMQk22hM",
+		  authDomain: "donkey-kong-ad236.firebaseapp.com",
+		  databaseURL: "https://donkey-kong-ad236-default-rtdb.asia-southeast1.firebasedatabase.app",
+		  projectId: "donkey-kong-ad236",
+		  storageBucket: "donkey-kong-ad236.firebasestorage.app",
+		  messagingSenderId: "87739350642",
+		  appId: "1:87739350642:web:11dc8bad05af8e14024ceb",
+		  measurementId: "G-LJEPXLFS34"
+        };
+
+        // Initialize Firebase
+        let database;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+        } catch (e) {
+            console.log("Firebase not configured - leaderboard will use local storage");
+        }
+
+        // Game State
+        let canvas, ctx;
+        let player = { name: '', studentId: '' };
+        let gameState = {
+            score: 0,
+            lives: 3,
+            level: 1,
+            isRunning: false,
+            isPaused: false
+        };
+
+        // Game Objects
+        let mario = {
+            x: 40,
+            y: 400,
+            width: 24,
+            height: 32,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            onLadder: false,
+            climbing: false,
+            facing: 1,
+            frame: 0,
+            jumping: false
+        };
+
+        let donkeyKong = {
+            x: 50,
+            y: 60,
+            width: 64,
+            height: 56,
+            frame: 0,
+            throwTimer: 0
+        };
+
+        let pauline = {
+            x: 220,
+            y: 28,
+            width: 24,
+            height: 32
+        };
+
+        let barrels = [];
+        let platforms = [];
+        let ladders = [];
+        let keys = { left: false, right: false, up: false, down: false, jump: false };
+
+        const GRAVITY = 0.5;
+        const JUMP_FORCE = -10;
+        const MOVE_SPEED = 3;
+        const CLIMB_SPEED = 2;
+
+        // Initialize platforms for classic DK layout
+        function initLevel() {
+            platforms = [];
+            ladders = [];
+            barrels = [];
+
+            // Ground platform
+            platforms.push({ x: 0, y: 420, width: 512, height: 28, slope: 0 });
+
+            // Platform 1 (bottom, sloped)
+            for (let i = 0; i < 14; i++) {
+                platforms.push({ x: i * 38, y: 365 - i * 2, width: 38, height: 12, slope: -2/38 });
+            }
+
+            // Platform 2
+            for (let i = 0; i < 14; i++) {
+                platforms.push({ x: 512 - (i + 1) * 38, y: 300 - i * 2, width: 38, height: 12, slope: 2/38 });
+            }
+
+            // Platform 3
+            for (let i = 0; i < 14; i++) {
+                platforms.push({ x: i * 38, y: 235 - i * 2, width: 38, height: 12, slope: -2/38 });
+            }
+
+            // Platform 4
+            for (let i = 0; i < 14; i++) {
+                platforms.push({ x: 512 - (i + 1) * 38, y: 170 - i * 2, width: 38, height: 12, slope: 2/38 });
+            }
+
+            // Top platform (DK and Pauline)
+            platforms.push({ x: 30, y: 100, width: 200, height: 12, slope: 0 });
+
+            // Ladders
+            ladders.push({ x: 460, y: 365, width: 20, height: 55, broken: false });
+            ladders.push({ x: 200, y: 340, width: 20, height: 35, broken: true });
+            ladders.push({ x: 80, y: 300, width: 20, height: 55, broken: false });
+            ladders.push({ x: 350, y: 275, width: 20, height: 35, broken: true });
+            ladders.push({ x: 430, y: 235, width: 20, height: 55, broken: false });
+            ladders.push({ x: 150, y: 210, width: 20, height: 35, broken: true });
+            ladders.push({ x: 80, y: 170, width: 20, height: 55, broken: false });
+            ladders.push({ x: 300, y: 145, width: 20, height: 35, broken: true });
+            ladders.push({ x: 180, y: 100, width: 20, height: 60, broken: false });
+
+            // Reset Mario position
+            mario.x = 40;
+            mario.y = 400;
+            mario.vx = 0;
+            mario.vy = 0;
+            mario.onGround = false;
+            mario.onLadder = false;
+            mario.climbing = false;
+
+            donkeyKong.throwTimer = 0;
+        }
+
+        // Login function
+        function login() {
+            const name = document.getElementById('playerName').value.trim();
+            const id = document.getElementById('studentId').value.trim();
+
+            if (!name || !id) {
+                alert('Please enter both name and student ID!');
+                return;
+            }
+
+            player.name = name;
+            player.studentId = id;
+
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('displayName').textContent = name;
+
+            startGame();
+        }
+
+        // Start Game
+        function startGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.level = 1;
+            gameState.isRunning = true;
+
+            updateUI();
+            initLevel();
+            gameLoop();
+        }
+
+        // Game Loop
+        function gameLoop() {
+            if (!gameState.isRunning) return;
+
+            update();
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update game state
+        function update() {
+            if (gameState.isPaused) return;
+
+            // Mario movement
+            if (!mario.climbing) {
+                if (keys.left) {
+                    mario.vx = -MOVE_SPEED;
+                    mario.facing = -1;
+                } else if (keys.right) {
+                    mario.vx = MOVE_SPEED;
+                    mario.facing = 1;
+                } else {
+                    mario.vx = 0;
+                }
+
+                // Apply gravity
+                mario.vy += GRAVITY;
+
+                // Jump
+                if (keys.jump && mario.onGround) {
+                    mario.vy = JUMP_FORCE;
+                    mario.onGround = false;
+                    mario.jumping = true;
+                }
+            }
+
+            // Ladder climbing
+            let onLadder = checkLadder();
+            if (onLadder && (keys.up || keys.down)) {
+                mario.climbing = true;
+                mario.vy = 0;
+                mario.vx = 0;
+                if (keys.up) mario.y -= CLIMB_SPEED;
+                if (keys.down) mario.y += CLIMB_SPEED;
+            } else if (!onLadder) {
+                mario.climbing = false;
+            }
+
+            // Apply velocity
+            mario.x += mario.vx;
+            mario.y += mario.vy;
+
+            // Platform collision
+            mario.onGround = false;
+            for (let p of platforms) {
+                if (checkPlatformCollision(mario, p)) {
+                    if (mario.vy > 0) {
+                        mario.y = p.y - mario.height;
+                        mario.vy = 0;
+                        mario.onGround = true;
+                        mario.jumping = false;
+                    }
+                }
+            }
+
+            // Screen bounds
+            if (mario.x < 0) mario.x = 0;
+            if (mario.x > canvas.width - mario.width) mario.x = canvas.width - mario.width;
+            if (mario.y > canvas.height) {
+                loseLife();
+            }
+
+            // Animation frame
+            if (mario.vx !== 0 || mario.climbing) {
+                mario.frame = (mario.frame + 0.2) % 4;
+            }
+
+            // Donkey Kong barrel throwing
+            donkeyKong.throwTimer++;
+            if (donkeyKong.throwTimer > 120 - gameState.level * 10) {
+                throwBarrel();
+                donkeyKong.throwTimer = 0;
+                donkeyKong.frame = (donkeyKong.frame + 1) % 2;
+            }
+
+            // Update barrels
+            updateBarrels();
+
+            // Check victory
+            if (checkVictory()) {
+                victory();
+            }
+        }
+
+        function checkLadder() {
+            for (let l of ladders) {
+                if (l.broken) continue;
+                if (mario.x + mario.width > l.x && mario.x < l.x + l.width &&
+                    mario.y + mario.height > l.y && mario.y < l.y + l.height) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkPlatformCollision(obj, platform) {
+            return obj.x + obj.width > platform.x &&
+                   obj.x < platform.x + platform.width &&
+                   obj.y + obj.height >= platform.y &&
+                   obj.y + obj.height <= platform.y + 20 &&
+                   obj.vy >= 0;
+        }
+
+        function throwBarrel() {
+            barrels.push({
+                x: donkeyKong.x + 30,
+                y: donkeyKong.y + 40,
+                width: 20,
+                height: 18,
+                vx: 2,
+                vy: 0,
+                onGround: false,
+                frame: 0
+            });
+        }
+
+        function updateBarrels() {
+            for (let i = barrels.length - 1; i >= 0; i--) {
+                let b = barrels[i];
+
+                // Apply gravity
+                b.vy += GRAVITY * 0.7;
+                b.x += b.vx;
+                b.y += b.vy;
+
+                // Platform collision for barrels
+                b.onGround = false;
+                for (let p of platforms) {
+                    if (checkPlatformCollision(b, p)) {
+                        b.y = p.y - b.height;
+                        b.vy = 0;
+                        b.onGround = true;
+                        // Roll down slope
+                        b.vx = b.vx > 0 ? 2 + gameState.level * 0.3 : -2 - gameState.level * 0.3;
+                    }
+                }
+
+                // Change direction at edges
+                if (b.x <= 0) {
+                    b.vx = Math.abs(b.vx);
+                } else if (b.x >= canvas.width - b.width) {
+                    b.vx = -Math.abs(b.vx);
+                }
+
+                // Remove if off screen
+                if (b.y > canvas.height + 50) {
+                    barrels.splice(i, 1);
+                    continue;
+                }
+
+                // Barrel animation
+                b.frame = (b.frame + 0.3) % 4;
+
+                // Collision with Mario
+                if (checkCollision(mario, b)) {
+                    loseLife();
+                    barrels.splice(i, 1);
+                }
+
+                // Jump over barrel bonus
+                if (mario.jumping && mario.y + mario.height < b.y &&
+                    Math.abs(mario.x - b.x) < 30) {
+                    b.jumped = true;
+                }
+                if (b.jumped && mario.y > b.y) {
+                    gameState.score += 100;
+                    b.jumped = false;
+                    updateUI();
+                }
+            }
+        }
+
+        function checkCollision(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+
+        function checkVictory() {
+            return checkCollision(mario, pauline);
+        }
+
+        function loseLife() {
+            gameState.lives--;
+            updateUI();
+
+            if (gameState.lives <= 0) {
+                gameOver();
+            } else {
+                mario.x = 40;
+                mario.y = 400;
+                mario.vx = 0;
+                mario.vy = 0;
+                barrels = [];
+            }
+        }
+
+        function gameOver() {
+            gameState.isRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOverModal').classList.remove('hidden');
+            saveScore();
+        }
+
+        function victory() {
+            gameState.isRunning = false;
+            gameState.score += 1000 + (gameState.level * 500);
+            document.getElementById('victoryScore').textContent = gameState.score;
+            document.getElementById('victoryModal').classList.remove('hidden');
+            updateUI();
+        }
+
+        function nextLevel() {
+            document.getElementById('victoryModal').classList.add('hidden');
+            gameState.level++;
+            gameState.isRunning = true;
+            initLevel();
+            updateUI();
+            gameLoop();
+        }
+
+        // Draw everything
+        function draw() {
+            // Background
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw platforms (girders)
+            ctx.fillStyle = '#e74c3c';
+            for (let p of platforms) {
+                drawGirder(p.x, p.y, p.width, p.height);
+            }
+
+            // Draw ladders
+            for (let l of ladders) {
+                drawLadder(l);
+            }
+
+            // Draw Donkey Kong
+            drawDonkeyKong();
+
+            // Draw Pauline
+            drawPauline();
+
+            // Draw barrels
+            for (let b of barrels) {
+                drawBarrel(b);
+            }
+
+            // Draw Mario
+            drawMario();
+
+            // Draw "HELP!" text
+            ctx.fillStyle = '#ff69b4';
+            ctx.font = '10px "Press Start 2P"';
+            ctx.fillText('HELP!', pauline.x - 10, pauline.y - 5);
+        }
+
+        function drawGirder(x, y, width, height) {
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(x, y, width, height);
+            ctx.fillStyle = '#c0392b';
+            for (let i = 0; i < width; i += 16) {
+                ctx.fillRect(x + i, y, 8, height);
+            }
+        }
+
+        function drawLadder(l) {
+            ctx.fillStyle = l.broken ? '#4a6fa5' : '#3498db';
+            // Sides
+            ctx.fillRect(l.x, l.y, 4, l.height);
+            ctx.fillRect(l.x + l.width - 4, l.y, 4, l.height);
+            // Rungs
+            for (let i = 0; i < l.height; i += 12) {
+                if (!l.broken || (i > 10 && i < l.height - 10)) {
+                    ctx.fillRect(l.x, l.y + i, l.width, 3);
+                }
+            }
+        }
+
+        function drawMario() {
+            ctx.save();
+            ctx.translate(mario.x + mario.width / 2, mario.y);
+
+            if (mario.facing === -1) {
+                ctx.scale(-1, 1);
+            }
+
+            // Body (red)
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(-8, 10, 16, 12);
+
+            // Overalls (blue)
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(-8, 18, 16, 14);
+
+            // Head (skin)
+            ctx.fillStyle = '#f5b041';
+            ctx.fillRect(-6, 0, 12, 10);
+
+            // Cap (red)
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(-8, -2, 16, 6);
+            ctx.fillRect(-4, -4, 12, 4);
+
+            // Mustache
+            ctx.fillStyle = '#4a2c00';
+            ctx.fillRect(-4, 6, 10, 2);
+
+            // Eye
+            ctx.fillStyle = '#000';
+            ctx.fillRect(2, 3, 3, 3);
+
+            // Legs animation
+            if (!mario.climbing) {
+                let legOffset = Math.floor(mario.frame) % 2 === 0 ? 0 : 4;
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(-6, 28, 5, 4 + legOffset);
+                ctx.fillRect(1, 28, 5, 4 + (4 - legOffset));
+            }
+
+            ctx.restore();
+        }
+
+        function drawDonkeyKong() {
+            ctx.save();
+            ctx.translate(donkeyKong.x, donkeyKong.y);
+
+            // Body (brown)
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(10, 15, 44, 35);
+
+            // Head
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(15, 0, 34, 20);
+
+            // Face
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(20, 5, 24, 15);
+
+            // Eyes
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(22, 7, 8, 6);
+            ctx.fillRect(34, 7, 8, 6);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(26, 9, 3, 3);
+            ctx.fillRect(38, 9, 3, 3);
+
+            // Mouth
+            ctx.fillStyle = '#000';
+            ctx.fillRect(28, 15, 8, 3);
+
+            // Arms
+            ctx.fillStyle = '#8B4513';
+            let armOffset = donkeyKong.frame === 0 ? 0 : 5;
+            ctx.fillRect(0, 20 - armOffset, 12, 20);
+            ctx.fillRect(52, 20 + armOffset, 12, 20);
+
+            // Chest
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(20, 20, 24, 15);
+
+            ctx.restore();
+        }
+
+        function drawPauline() {
+            ctx.save();
+            ctx.translate(pauline.x, pauline.y);
+
+            // Dress (pink)
+            ctx.fillStyle = '#ff69b4';
+            ctx.fillRect(4, 12, 16, 20);
+
+            // Head
+            ctx.fillStyle = '#f5b041';
+            ctx.fillRect(6, 0, 12, 12);
+
+            // Hair
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(4, 0, 16, 5);
+            ctx.fillRect(2, 3, 4, 8);
+            ctx.fillRect(18, 3, 4, 8);
+
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.fillRect(8, 5, 2, 2);
+            ctx.fillRect(14, 5, 2, 2);
+
+            ctx.restore();
+        }
+
+        function drawBarrel(b) {
+            ctx.save();
+            ctx.translate(b.x + b.width / 2, b.y + b.height / 2);
+            ctx.rotate(b.frame * Math.PI / 2);
+
+            // Barrel body
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(-10, -9, 20, 18);
+
+            // Barrel bands
+            ctx.fillStyle = '#f39c12';
+            ctx.fillRect(-10, -9, 20, 3);
+            ctx.fillRect(-10, 6, 20, 3);
+
+            // Center
+            ctx.fillStyle = '#5D3A1A';
+            ctx.fillRect(-4, -4, 8, 8);
+
+            ctx.restore();
+        }
+
+        function updateUI() {
+            document.getElementById('scoreDisplay').textContent = gameState.score;
+            document.getElementById('livesDisplay').textContent = '❤'.repeat(gameState.lives);
+            document.getElementById('levelDisplay').textContent = gameState.level;
+        }
+
+        // Save score to Firebase
+        function saveScore() {
+            const scoreData = {
+                name: player.name,
+                studentId: player.studentId,
+                score: gameState.score,
+                level: gameState.level,
+                timestamp: Date.now()
+            };
+
+            if (database) {
+                database.ref('leaderboard').push(scoreData)
+                    .then(() => console.log('Score saved!'))
+                    .catch(e => {
+                        console.log('Firebase error, using local storage');
+                        saveToLocalStorage(scoreData);
+                    });
+            } else {
+                saveToLocalStorage(scoreData);
+            }
+        }
+
+        function saveToLocalStorage(scoreData) {
+            let scores = JSON.parse(localStorage.getItem('dkScores') || '[]');
+            scores.push(scoreData);
+            scores.sort((a, b) => b.score - a.score);
+            scores = scores.slice(0, 10);
+            localStorage.setItem('dkScores', JSON.stringify(scores));
+        }
+
+        // Show leaderboard
+        function showLeaderboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('leaderboardScreen').classList.remove('hidden');
+            loadLeaderboard();
+        }
+
+        function loadLeaderboard() {
+            const listEl = document.getElementById('leaderboardList');
+            listEl.innerHTML = '<p class="text-center text-gray-500 text-xs">Loading...</p>';
+
+            if (database) {
+                database.ref('leaderboard')
+                    .orderByChild('score')
+                    .limitToLast(10)
+                    .once('value')
+                    .then(snapshot => {
+                        const scores = [];
+                        snapshot.forEach(child => {
+                            scores.push(child.val());
+                        });
+                        scores.reverse();
+                        displayLeaderboard(scores);
+                    })
+                    .catch(e => {
+                        console.log('Firebase error, using local storage');
+                        displayLeaderboard(JSON.parse(localStorage.getItem('dkScores') || '[]'));
+                    });
+            } else {
+                displayLeaderboard(JSON.parse(localStorage.getItem('dkScores') || '[]'));
+            }
+        }
+
+        function displayLeaderboard(scores) {
+            const listEl = document.getElementById('leaderboardList');
+
+            if (scores.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500 text-xs">No scores yet!</p>';
+                return;
+            }
+
+            listEl.innerHTML = scores.map((s, i) => `
+                <div class="leaderboard-row flex justify-between items-center p-3 rounded ${i < 3 ? 'border-l-4 border-yellow-400' : ''}">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-500'}">${i + 1}</span>
+                        <div>
+                            <p class="text-sm text-white">${s.name}</p>
+                            <p class="text-xs text-gray-500">${s.studentId}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-yellow-400">${s.score}</p>
+                        <p class="text-xs text-gray-500">LVL ${s.level || 1}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function backToLogin() {
+            document.getElementById('leaderboardScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function backToMenu() {
+            gameState.isRunning = false;
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('victoryModal').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('victoryModal').classList.add('hidden');
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.level = 1;
+            gameState.isRunning = true;
+            initLevel();
+            updateUI();
+            gameLoop();
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+            if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
+            if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
+            if (e.key === ' ' || e.key === 'ArrowUp') {
+                keys.jump = true;
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+            if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
+            if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
+            if (e.key === ' ') keys.jump = false;
+        });
+
+        // Mobile controls
+        function mobileControl(dir) {
+            if (dir === 'left') keys.left = true;
+            if (dir === 'right') keys.right = true;
+            if (dir === 'up') keys.up = true;
+            if (dir === 'jump') keys.jump = true;
+        }
+
+        function mobileControlEnd(dir) {
+            if (dir === 'left') keys.left = false;
+            if (dir === 'right') keys.right = false;
+            if (dir === 'up') keys.up = false;
+            if (dir === 'jump') keys.jump = false;
+        }
+    </script>
+</body>
+</html>
